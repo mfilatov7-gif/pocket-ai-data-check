@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pocket AI Data Check</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&family=Unbounded:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/* Layout idea: a phone-sized working prototype on the left, a compact "why & how" brief on the right; stacks on narrow screens. */
+:root{
+  --ink:#14202B; --muted:#5D6B78; --line:#DDE3EA; --bg:#EEF2F6; --card:#FFFFFF; --soft:#F5F7FA;
+  --accent:#2F5BEA; --accent-soft:#E6ECFD;
+  --ok:#1E8A5A; --ok-soft:#E3F4EB; --warn:#B86E00; --warn-soft:#FFF1DB; --bad:#C2372F; --bad-soft:#FCE6E4;
+  --phone:#0E1720;
+  --display:"Unbounded", "Onest", system-ui, sans-serif;
+  --body:"Onest", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ink:#E7EDF3; --muted:#9AA8B5; --line:#2A3743; --bg:#0D141B; --card:#16212B; --soft:#1C2833;
+    --accent:#7C9BFF; --accent-soft:#1E2B4D;
+    --ok:#4CC28A; --ok-soft:#14302A; --warn:#F0A63C; --warn-soft:#352813; --bad:#F07068; --bad-soft:#3A1C1B;
+    --phone:#04080C; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --ink:#E7EDF3; --muted:#9AA8B5; --line:#2A3743; --bg:#0D141B; --card:#16212B; --soft:#1C2833;
+  --accent:#7C9BFF; --accent-soft:#1E2B4D;
+  --ok:#4CC28A; --ok-soft:#14302A; --warn:#F0A63C; --warn-soft:#352813; --bad:#F07068; --bad-soft:#3A1C1B;
+  --phone:#04080C; color-scheme: dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.45}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1120px;margin:0 auto;padding:28px 16px 48px;display:grid;grid-template-columns:400px 1fr;gap:36px;align-items:start}
+@media (max-width:900px){.wrap{grid-template-columns:1fr;justify-items:center}}
+
+/* Phone */
+.phone{width:100%;max-width:390px;position:sticky;top:20px;background:var(--phone);border-radius:42px;padding:12px;box-shadow:0 24px 60px -24px rgba(10,20,30,.45)}
+.screen{background:var(--soft);border-radius:32px;overflow:hidden;height:780px;display:flex;flex-direction:column}
+.status{display:flex;justify-content:space-between;padding:10px 22px 4px;font-size:12px;font-weight:600;color:var(--muted)}
+.apphead{display:flex;justify-content:space-between;align-items:center;padding:6px 18px 10px}
+.logo{font-family:var(--display);font-weight:700;font-size:18px;letter-spacing:-.02em}
+.logo span{color:var(--accent)}
+.view{flex:1;overflow-y:auto;padding:0 14px 16px;display:flex;flex-direction:column;gap:12px}
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line);background:var(--card)}
+.tab{border:0;background:none;padding:10px 4px 14px;font-size:12px;font-weight:600;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:3px;position:relative}
+.tab[aria-selected="true"]{color:var(--accent)}
+.tab .dot{position:absolute;top:6px;left:calc(50% + 10px);background:var(--bad);color:#fff;font-size:10px;min-width:16px;height:16px;border-radius:8px;display:grid;place-items:center;padding:0 4px}
+.tab svg{width:20px;height:20px}
+
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px}
+.balance .lbl{font-size:12px;color:var(--muted);font-weight:500}
+.balance .amt{font-family:var(--display);font-size:28px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;margin:2px 0 8px}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:5px 10px;border-radius:999px}
+.pill.ok{background:var(--ok-soft);color:var(--ok)} .pill.warn{background:var(--warn-soft);color:var(--warn)} .pill.bad{background:var(--bad-soft);color:var(--bad)}
+.pill.ai{background:var(--accent-soft);color:var(--accent)}
+.recon{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-top:10px;font-variant-numeric:tabular-nums}
+
+.banner{display:flex;gap:12px;align-items:center;background:var(--accent);color:#fff;border:0;border-radius:18px;padding:14px;text-align:left;width:100%}
+.banner b{display:block;font-size:14px}
+.banner small{opacity:.85;font-size:12px}
+.banner .go{margin-left:auto;font-size:20px}
+.banner.done{background:var(--ok)}
+
+.sect{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:4px 4px -4px}
+.tx{display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid var(--line)}
+.tx:last-child{border-bottom:0}
+.ic{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-size:13px;font-weight:700;flex:none;background:var(--soft);color:var(--muted)}
+.tx .nm{font-weight:600;font-size:14px}
+.tx .ct{font-size:12px;color:var(--muted)}
+.tx .sum{margin-left:auto;font-weight:600;font-variant-numeric:tabular-nums;text-align:right}
+.flag{font-size:11px;font-weight:600;display:block}
+.flag.bad{color:var(--bad)} .flag.warn{color:var(--warn)} .flag.ok{color:var(--ok)}
+.gaprow{font-size:12px;color:var(--warn);background:var(--warn-soft);border-radius:10px;padding:8px 10px;margin:6px 0}
+
+.issue{border-left:4px solid var(--line)}
+.issue.bad{border-left-color:var(--bad)} .issue.warn{border-left-color:var(--warn)} .issue.ai{border-left-color:var(--accent)}
+.issue h3{margin:6px 0 4px;font-size:15px;line-height:1.3}
+.issue p{margin:0 0 10px;font-size:13px;color:var(--muted)}
+.why{font-size:12px;background:var(--soft);border-radius:10px;padding:8px 10px;margin-bottom:10px;color:var(--ink)}
+.conf{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);margin-bottom:10px}
+.bar{flex:1;height:6px;background:var(--line);border-radius:3px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--warn);border-radius:3px}
+.acts{display:flex;gap:8px;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--card);border-radius:12px;padding:9px 12px;font-size:13px;font-weight:600}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn:disabled{opacity:.55;cursor:default}
+.idcmp{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.idcmp div{background:var(--soft);border-radius:10px;padding:8px 10px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.idcmp span{font-size:11px;font-weight:600;color:var(--muted)}
+.idcmp code{font-size:12px;font-weight:600;font-family:ui-monospace,Menlo,Consolas,monospace}
+.idcmp small{font-size:11px;color:var(--muted);overflow-wrap:anywhere}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.chip{border:1px solid var(--line);background:var(--soft);border-radius:999px;padding:6px 10px;font-size:12px;font-weight:600}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.resolved{font-size:13px;color:var(--ok);font-weight:600;display:flex;gap:8px;align-items:center}
+.empty{text-align:center;padding:26px 10px;color:var(--muted)}
+.empty b{display:block;font-family:var(--display);color:var(--ok);font-size:17px;margin-bottom:6px}
+
+.field{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;color:var(--muted)}
+.field input{border:1px solid var(--line);background:var(--soft);border-radius:12px;padding:10px 12px;font-size:14px;font-weight:500;color:var(--ink)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.examples{display:flex;flex-wrap:wrap;gap:6px}
+.result{display:flex;flex-direction:column;gap:8px}
+.result .cat{font-family:var(--display);font-size:20px;font-weight:700}
+.lvl{font-size:12px;color:var(--muted)}
+.rules li{font-size:13px;padding:4px 0}
+.rules{margin:0;padding-left:18px}
+.mode{font-size:11px;color:var(--muted);text-align:center}
+
+.toast{position:absolute;left:14px;right:14px;bottom:76px;background:var(--ink);color:var(--card);border-radius:14px;padding:11px 14px;font-size:13px;display:flex;align-items:center;gap:10px;transform:translateY(20px);opacity:0;pointer-events:none;transition:.2s}
+.toast.show{transform:none;opacity:1;pointer-events:auto}
+.toast button{margin-left:auto;background:none;border:0;color:var(--card);font-weight:700;text-decoration:underline}
+.screenwrap{position:relative}
+.spin{width:14px;height:14px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;display:inline-block;animation:sp .7s linear infinite;vertical-align:-2px}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation:none}.toast{transition:none}}
+
+/* Brief */
+.brief{display:flex;flex-direction:column;gap:22px;max-width:640px}
+.eyebrow{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px}
+.brief h1{font-family:var(--display);font-size:28px;line-height:1.15;margin:0 0 10px;letter-spacing:-.02em;text-wrap:balance}
+.brief .lead{color:var(--ink);margin:0;max-width:62ch;font-size:16px}
+.step{display:grid;grid-template-columns:34px 1fr;gap:14px}
+.stepn{width:34px;height:34px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;font-weight:700;font-family:var(--display);font-size:14px}
+.stepbody h2{font-size:18px;margin:4px 0 6px;text-wrap:balance}
+.stepbody p{margin:0 0 10px;color:var(--ink);max-width:62ch}
+.stack{display:flex;height:34px;border-radius:10px;overflow:hidden;margin:4px 0 10px;font-size:12px;font-weight:700}
+.seg{display:flex;align-items:center;padding:0 10px;color:#fff;white-space:nowrap;overflow:hidden}
+.seg.data,.legend i.data{background:var(--bad)} .seg.value,.legend i.value{background:var(--warn)} .seg.pay,.legend i.pay{background:var(--muted)}
+.legend{display:flex;flex-direction:column;gap:6px;font-size:14px;margin-bottom:10px}
+.legend div{display:grid;grid-template-columns:12px 1fr;gap:8px;align-items:baseline}
+.legend i{width:12px;height:12px;border-radius:3px;display:block;transform:translateY(1px)}
+.tag{display:inline-block;font-size:11px;font-weight:700;color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:1px 8px;margin-left:4px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:14px}
+.kpi b{font-family:var(--display);font-size:16px}
+.map{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-bottom:10px}
+.maphead,.maprow{display:grid;grid-template-columns:38% 1fr;gap:12px;padding:10px 12px}
+.maphead{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;background:var(--soft)}
+.maprow{border-top:1px solid var(--line);font-size:14px}
+.maprow small{display:block;color:var(--bad);font-weight:600;font-size:12px}
+@media (max-width:520px){.maphead{display:none}.maprow{grid-template-columns:1fr;gap:4px}}
+.howto{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;max-width:62ch}
+.tech{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 18px}
+.tech h2{font-size:15px;margin:0 0 8px}
+.tech p,.tech li{font-size:14px;max-width:62ch}
+.tech p{margin:0 0 8px}
+.tech ol{margin:0 0 10px;padding-left:20px;display:flex;flex-direction:column;gap:6px}
+.note{font-size:13px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="phone" aria-label="Прототип застосунку Pocket">
+    <div class="screen screenwrap">
+      <div class="status"><span>9:41</span><span>Pocket</span></div>
+      <div class="apphead"><div class="logo">Pocket<span>.</span></div><span class="pill ai" id="modePill">AI Data Check</span></div>
+      <div class="view" id="view"></div>
+      <div class="tabs" role="tablist">
+        <button class="tab" role="tab" id="t-feed" aria-selected="true" data-tab="feed">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Стрічка</button>
+        <button class="tab" role="tab" id="t-check" aria-selected="false" data-tab="check">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7l8-4z"/><path d="M9 12l2 2 4-4"/></svg>Перевірка<span class="dot" id="dot">3</span></button>
+        <button class="tab" role="tab" id="t-try" aria-selected="false" data-tab="try">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.4 6.6L21 11l-6.6 2.4L12 20l-2.4-6.6L3 11l6.6-2.4z"/></svg>Тест AI</button>
+      </div>
+      <div class="toast" id="toast" role="status"><span id="toastText"></span><button id="undoBtn" type="button">Скасувати</button></div>
+    </div>
+  </div>
+
+  <section class="brief">
+    <div>
+      <div class="eyebrow">Warsaw AI Product Bootcamp · кейс Pocket</div>
+      <h1>AI Data Check: дані, яким можна довіряти</h1>
+      <p class="lead">Платні користувачі Pocket ідуть не через брак AI-порад, а тому, що не довіряють цифрам у застосунку. Фіча автоматично знаходить і пропонує виправити помилки в даних. Ліворуч робочий прототип.</p>
+    </div>
+
+    <div class="step">
+      <div class="stepn">1</div>
+      <div class="stepbody">
+        <h2>Гіпотеза команди не підтвердилась</h2>
+        <p>Команда вважала, що AI Insights утримують користувачів, і хотіла запустити Daily AI Coach. Ми перевірили: AI Insights відкривають ті, у кого підключений банк і чисті дані, і саме тому вони лишаються. Серед користувачів без проблем з даними відтік майже не залежить від AI (12–18%).</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="stepn">2</div>
+      <div class="stepbody">
+        <h2>Чому насправді йдуть</h2>
+        <p>На першому продовженні втрачено 80 з 266 платних користувачів. Половина з них пішла через помилки в даних:</p>
+        <div class="stack" role="img" aria-label="Причини втрат: дані 40, цінність 22, невдалий платіж 18">
+          <div class="seg data" style="flex:40">Дані · 40</div>
+          <div class="seg value" style="flex:22">Цінність · 22</div>
+          <div class="seg pay" style="flex:18">Платіж · 18</div>
+        </div>
+        <div class="legend">
+          <div><i class="data"></i><span><b>Помилки в даних, 50%.</b> Банк не передав транзакції (18), неправильні категорії й неточні через них AI-поради (13), дублі та неправильний баланс (9). <span class="tag">ціль фічі</span></span></div>
+          <div><i class="value"></i><span><b>Не побачили цінності, 28%.</b> Дорого, мало користі, не користуюсь.</span></div>
+          <div><i class="pay"></i><span><b>Платіж не пройшов, 22%.</b> Технічна проблема оплати, вирішується без AI.</span></div>
+        </div>
+        <p class="kpi">Відтік у тих, хто стикався з помилками даних: <b>36%</b>. У тих, хто не стикався: <b>16%</b>.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="stepn">3</div>
+      <div class="stepbody">
+        <h2>Що робить фіча</h2>
+        <div class="map">
+          <div class="maphead"><span>Проблема з даних</span><span>Що робить AI</span></div>
+          <div class="maprow"><span><b>Банк не передав транзакції</b><small>18 відтоків</small></span><span>Щодня звіряє баланс у Pocket з банком. Якщо не сходиться, показує, за які дні бракує даних, і пропонує перепідключити банк або завантажити виписку.</span></div>
+          <div class="maprow"><span><b>Неправильна категорія</b><small>13 відтоків</small></span><span>Пропонує правильну категорію з рівнем упевненості й поясненням. Якщо не впевнений, питає. Кожна правка користувача стає його правилом.</span></div>
+          <div class="maprow"><span><b>Дублі й неправильний баланс</b><small>9 відтоків</small></span><span>Знаходить одну покупку, записану двічі, і пропонує об'єднати. При ручному введенні попереджає одразу.</span></div>
+        </div>
+        <p class="note">Головне правило: AI нічого не змінює сам. Він пропонує, користувач підтверджує в один тап, будь-яку дію можна скасувати.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="stepn">4</div>
+      <div class="stepbody">
+        <h2>Як подивитися прототип</h2>
+        <ol class="howto">
+          <li><b>Стрічка.</b> Баланс не збігається з банком, AI знайшов проблеми. Натисни синю плашку.</li>
+          <li><b>Перевірка.</b> Виправ кожну проблему: об'єднай дубль, підтверди категорію Uber, перепідключи банк. Баланс перерахується й стане «звірено ✓». Спробуй «Скасувати».</li>
+          <li><b>Тест AI.</b> Введи будь-яку транзакцію або натисни приклад. Видно, на якому кроці визначилась категорія: більшість знаходиться в довіднику безкоштовно, модель потрібна лише для нових магазинів.</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="stepn">5</div>
+      <div class="stepbody">
+        <h2>Очікуваний ефект</h2>
+        <p>Відтік на першому продовженні: <b>25% → 17–20%</b>. Максимум, якщо прибрати всі проблеми з даними, близько 16%. Оцінка спирається на наші припущення щодо ефективності AI і перевіряється A/B-тестом.</p>
+      </div>
+    </div>
+
+    <div class="tech">
+      <h2>Як визначається категорія (для технічних питань)</h2>
+      <p>Транзакція проходить кроки по черзі й зупиняється на першому, що дав відповідь:</p>
+      <ol>
+        <li><b>Правило користувача</b>: він уже виправляв цей магазин. Безкоштовно.</li>
+        <li><b>Довідник магазинів</b> Pocket: Lidl = Продукти. Поповнюється правками всіх користувачів. Безкоштовно, тут визначається більшість транзакцій.</li>
+        <li><b>Код типу продавця від банку</b> (MCC, наприклад 5411 = супермаркети), якщо банк його передав.</li>
+        <li><b>AI-модель Lite</b>: лише нові або неоднозначні магазини. Частки цента, відповідь одразу додається в довідник.</li>
+      </ol>
+      <p>Дублі спершу ловляться простим правилом за ідентифікатором транзакції від банку. AI потрібен лише там, де банк надіслав ту саму покупку з різними ідентифікаторами або користувач вводить витрати вручну.</p>
+      <p class="note">Далі (v2): покупки на маркетплейсах на кшталт Allegro, де з виписки не видно, що куплено. У прототипі є приклад такої картки.</p>
+    </div>
+  </section>
+</div>
+
+<script>
+const CATS = {Groceries:"Продукти", Dining:"Кафе", Transport:"Транспорт", Shopping:"Покупки", Bills:"Рахунки", Entertainment:"Розваги"};
+const SUB = {Clothes:"Одяг", Electronics:"Техніка", Home:"Дім", Kids:"Діти та іграшки", Food:"Продукти", Beauty:"Краса", Other:"Інше"};
+const BANK_BALANCE = 1199.20;
+const fmt = n => "$" + n.toLocaleString("uk-UA",{minimumFractionDigits:2, maximumFractionDigits:2});
+
+const state = {
+  tab:"feed",
+  tx:[
+    {id:1, d:"16.08", m:"Allegro", c:"Shopping", a:86.32, flag:"mix"},
+    {id:2, d:"15.08", m:"Uber", c:"Groceries", a:52.19, flag:"cat"},
+    {id:3, d:"15.08", m:"Cafe Luna", c:"Dining", a:33.65},
+    {id:4, d:"14.08", m:"Lidl", c:"Groceries", a:29.17, flag:"dup"},
+    {id:5, d:"14.08", m:"Lidl", c:"Groceries", a:29.17, flag:"dup"},
+    {id:6, d:"11.08", m:"Internet Plan", c:"Bills", a:39.69},
+    {id:7, d:"11.08", m:"Spotify", c:"Entertainment", a:9.99},
+    {id:8, d:"10.08", m:"Biedronka", c:"Groceries", a:24.12}
+  ],
+  issues:{dup:"open", cat:"open", mix:"open", gap:"open"},
+  subUse:{Home:3, Kids:2, Clothes:1}, mixSplit:null, mixBusy:false,
+  catChoice:null, showPicker:false, gapBusy:false,
+  rules:{}, // merchant -> category (personal rules)
+  history:[]
+};
+const missing = [{id:9, d:"13.08", m:"Biedronka", c:"Groceries", a:41.80, isNew:true},{id:10, d:"12.08", m:"Orlen", c:"Transport", a:43.60, isNew:true}];
+
+function appBalance(){
+  // app balance = bank balance + expenses the app is missing - extra duplicate expenses
+  let b = BANK_BALANCE;
+  if(state.issues.gap==="open") b += 85.40;
+  if(state.issues.dup==="open") b -= 29.17;
+  return b;
+}
+function openCount(){return Object.values(state.issues).filter(v=>v==="open").length;}
+
+function render(){
+  document.querySelectorAll(".tab").forEach(t=>t.setAttribute("aria-selected", t.dataset.tab===state.tab));
+  const n=openCount(); const dot=document.getElementById("dot");
+  dot.textContent=n; dot.style.display=n?"grid":"none";
+  const v=document.getElementById("view");
+  v.innerHTML = state.tab==="feed"?feedView():state.tab==="check"?checkView():tryView();
+  v.scrollTop=0;
+  bindView();
+}
+
+function balanceCard(){
+  const app=appBalance(), diff=+(app-BANK_BALANCE).toFixed(2);
+  const ok=Math.abs(diff)<0.01;
+  return `<div class="card balance">
+    <div class="lbl">Баланс у Pocket</div>
+    <div class="amt">${fmt(app)}</div>
+    ${ok?`<span class="pill ok">✓ Баланс звірено з банком сьогодні</span>`:`<span class="pill warn">Розбіжність з банком: ${fmt(Math.abs(diff))}</span>`}
+    <div class="recon"><span>Банк (mBank): ${fmt(BANK_BALANCE)}</span><span>Контрольна точка: сьогодні 9:00</span></div>
+  </div>`;
+}
+
+function feedView(){
+  const n=openCount();
+  const banner = n?`<button class="banner" data-go="check" type="button"><div><b>AI Data Check знайшов ${n} ${n===1?"проблему":"проблеми"}</b><small>Перевір і виправ в один тап</small></div><span class="go">→</span></button>`
+    :`<div class="banner done"><div><b>Дані в порядку</b><small>Усі транзакції перевірені, баланс збігається з банком</small></div></div>`;
+  let rows="", gapShown=false;
+  const list=[...state.tx].sort((a,b)=>b.d.split(".").reverse().join("").localeCompare(a.d.split(".").reverse().join("")) || a.id-b.id);
+  for(const t of list){
+    if(!gapShown && state.issues.gap==="open" && t.d<="11.08" && t.d.slice(3)==="08"){
+      rows+=`<div class="gaprow">Немає транзакцій 12–13.08. Схоже, банк не передав дані.</div>`; gapShown=true;
+    }
+    rows+=txRow(t);
+  }
+  return balanceCard()+banner+`<div class="sect">Транзакції</div><div class="card" style="padding:4px 10px">${rows}</div>`;
+}
+function txRow(t){
+  let flag="";
+  if(t.flag==="dup" && state.issues.dup==="open") flag=`<span class="flag bad">Можливий дубль</span>`;
+  if(t.flag==="cat" && state.issues.cat==="open") flag=`<span class="flag warn">Категорія під питанням</span>`;
+  if(t.flag==="mix" && state.issues.mix==="open") flag=`<span class="flag warn">Що купили?</span>`;
+  if(t.fixed) flag=`<span class="flag ok">Виправлено AI</span>`;
+  if(t.isNew) flag=`<span class="flag ok">Додано з банку</span>`;
+  return `<div class="tx"><div class="ic">${t.m.slice(0,2)}</div><div><div class="nm">${t.m}</div><div class="ct">${CATS[t.c]}${t.sub?" · "+SUB[t.sub]:""} · ${t.d}</div></div><div class="sum">−${fmt(t.a)}${flag}</div></div>`;
+}
+
+function checkView(){
+  let html = balanceCard();
+  if(!openCount()){
+    html+=`<div class="card empty"><b>Усе перевірено ✓</b>Категорії правильні, дублів немає, баланс збігається з банком.</div>`;
+  }
+  // duplicate
+  html+= state.issues.dup==="open"? `<div class="card issue bad">
+    <span class="pill bad">Дубль</span>
+    <h3>Lidl ${fmt(29.17)} записано двічі, 14.08</h3>
+    <p>Банк надіслав одну покупку двічі з різними ID: спочатку «в обробці», потім «проведена». Правило за ID банку цей випадок не зловило.</p>
+    <div class="idcmp">
+      <div><span>В обробці (pending)</span><code>ID 7Q2K…91F</code><small>14.08 · LIDL SP Z O O WARSZAWA</small></div>
+      <div><span>Проведена (booked)</span><code>ID B4XM…0C2</code><small>14.08 · Lidl Warszawa</small></div>
+    </div>
+    <div class="conf">Ймовірність дубля<div class="bar"><i style="width:94%;background:var(--bad)"></i></div>0.94</div>
+    <div class="why">Чому AI так вважає: однакові сума й дата, назва мерчанта збігається після нормалізації, а банк не передав зв'язку між записами. Через дубль баланс менший за банківський на ${fmt(29.17)}.</div>
+    <div class="acts"><button class="btn pri" data-act="mergeDup" type="button">Об'єднати</button><button class="btn" data-act="keepDup" type="button">Це дві різні покупки</button></div>
+  </div>` : resolvedCard("dup");
+  // category
+  const choice=state.catChoice;
+  html+= state.issues.cat==="open"? `<div class="card issue warn">
+    <span class="pill warn">Категорія</span>
+    <h3>Uber ${fmt(52.19)}: «Продукти» чи «Транспорт»?</h3>
+    <p>Зараз стоїть «Продукти». AI пропонує «Транспорт».</p>
+    <div class="conf">Впевненість AI<div class="bar"><i style="width:71%"></i></div>0.71</div>
+    <div class="why">Чому: Uber зазвичай означає поїздку. Але схожі суми бувають в Uber Eats (доставка їжі), тому AI питає, а не змінює сам.</div>
+    <div class="acts"><button class="btn pri" data-act="catConfirm" type="button">Так, Транспорт</button><button class="btn" data-act="catOther" type="button">Інша категорія</button></div>
+    ${state.showPicker?`<div class="chips">${Object.entries(CATS).map(([k,l])=>`<button class="chip" type="button" data-cat="${k}" aria-pressed="${choice===k}">${l}</button>`).join("")}</div>`:""}
+  </div>` : resolvedCard("cat");
+  // marketplace: what was bought
+  html+= state.issues.mix==="open"? mixCard() : resolvedCard("mix");
+  // gap
+  html+= state.issues.gap==="open"? `<div class="card issue ai">
+    <span class="pill ai">Пропуск даних</span>
+    <h3>Банк не передав транзакції за 12–13.08</h3>
+    <p>Баланс у Pocket більший за банківський: не вистачає витрат приблизно на ${fmt(85.40)}.</p>
+    <div class="why">Чому AI так вважає: зазвичай у тебе 2–4 транзакції на день, а 12–13.08 немає жодної. Контрольна точка балансу показала розбіжність.</div>
+    <div class="acts">${state.gapBusy?`<button class="btn" disabled type="button"><span class="spin"></span> Отримую дані…</button>`:
+      `<button class="btn pri" data-act="reconnect" type="button">Перепідключити банк</button><label class="btn" for="stmt">Завантажити виписку</label>`}
+    <input type="file" id="stmt" accept=".pdf,.csv,.png,.jpg" hidden></div>
+  </div>` : resolvedCard("gap");
+  if(Object.keys(state.rules).length){
+    html+=`<div class="card"><div class="sect" style="margin:0 0 6px">Твої правила (AI запам'ятав)</div><ul class="rules">${Object.entries(state.rules).map(([m,c])=>`<li>${m} → ${CATS[c]}</li>`).join("")}</ul></div>`;
+  }
+  return html;
+}
+function mixCard(){
+  const order=Object.keys(SUB).filter(k=>k!=="Other").sort((a,b)=>(state.subUse[b]||0)-(state.subUse[a]||0));
+  order.push("Other");
+  const top=order.filter(k=>(state.subUse[k]||0)>0).slice(0,3);
+  const chips=order.map(k=>`<button class="chip" type="button" data-sub="${k}">${SUB[k]}${top.includes(k)?` <small style="opacity:.7">· ${state.subUse[k]}×</small>`:""}</button>`).join("");
+  let split="";
+  if(state.mixBusy) split=`<div class="why"><span class="spin"></span> AI розпізнає товари на скріні…</div>`;
+  else if(state.mixSplit){
+    const sum=state.mixSplit.items.reduce((a,i)=>a+i.amount,0);
+    split=`<div class="why"><b>AI розпізнав замовлення${state.mixSplit.demo?" (демо)":""}:</b>
+      ${state.mixSplit.items.map(i=>`<div style="display:flex;justify-content:space-between;gap:8px;margin-top:4px"><span>${i.name} · <b>${SUB[i.sub]||"Інше"}</b></span><span style="font-variant-numeric:tabular-nums">${fmt(i.amount)}</span></div>`).join("")}
+      <div style="display:flex;justify-content:space-between;margin-top:6px;color:var(--muted)"><span>Разом / у банку</span><span>${fmt(sum)} / ${fmt(86.32)}</span></div></div>
+      <div class="acts" style="margin-bottom:10px"><button class="btn pri" data-act="splitOk" type="button">Розділити покупку</button><button class="btn" data-act="splitNo" type="button">Скасувати</button></div>`;
+  }
+  return `<div class="card issue warn">
+    <span class="pill warn">Маркетплейс</span>
+    <h3>Allegro ${fmt(86.32)}: що ти купив?</h3>
+    <p>За назвою магазину не зрозуміло, що всередині: одяг, техніка чи іграшки. Обери категорію або прикріпи скрін замовлення, і AI розділить покупку.</p>
+    ${split}
+    <div class="note" style="margin-bottom:6px">Часто обирані категорії піднімаються вгору</div>
+    <div class="chips" style="margin-top:0">${chips}</div>
+    <div class="acts" style="margin-top:10px"><label class="btn" for="orderShot">Прикріпити скрін замовлення</label><input type="file" id="orderShot" accept="image/*" hidden></div>
+  </div>`;
+}
+function resolvedCard(k){
+  const txt={dup:"Дубль Lidl опрацьовано", cat:"Категорію Uber виправлено", mix:"Покупку Allegro деталізовано", gap:"Пропущені транзакції додано (2)"}[k];
+  const kept={dup:"Позначено як дві різні покупки"}[k];
+  const val=state.issues[k];
+  return `<div class="card"><div class="resolved">✓ ${val==="kept"&&kept?kept:txt}</div></div>`;
+}
+
+function tryView(){
+  return `<div class="card">
+    <div class="sect" style="margin:0 0 8px">Перевір AI на своїй транзакції</div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <label class="field" for="inDesc">Опис з банку<input id="inDesc" value="HEBE 0412 WARSZAWA" autocomplete="off"></label>
+      <div class="row2">
+        <label class="field" for="inAmt">Сума, $<input id="inAmt" value="18.40" inputmode="decimal"></label>
+        <label class="field" for="inTime">Час<input id="inTime" value="17:20"></label>
+      </div>
+      <div class="examples">
+        <button class="chip" type="button" data-ex="UBER *TRIP HELP.UBER.COM|52.19|08:15">Uber поїздка</button>
+        <button class="chip" type="button" data-ex="UBER *EATS PENDING|27.50|20:10">Uber Eats</button>
+        <button class="chip" type="button" data-ex="NETFLIX.COM AMSTERDAM|13.99|03:00">Netflix</button>
+        <button class="chip" type="button" data-ex="ORLEN STACJA NR 4421|61.20|18:05">Orlen</button>
+        <button class="chip" type="button" data-ex="HEBE 0412 WARSZAWA|18.40|17:20">HEBE (новий мерчант)</button>
+        <button class="chip" type="button" data-ex="PAYPAL *XYZ 4029357733|15.00|02:14">PayPal (неясно)</button>
+        <button class="chip" type="button" data-ex="Uber|18.00|12:30">Uber (є правило)</button>
+      </div>
+      <button class="btn pri" id="runAi" type="button">Визначити категорію</button>
+    </div>
+  </div>
+  <div class="card result" id="result"><span class="note">Результат з'явиться тут: які кроки пройшла транзакція, категорія, впевненість і пояснення.</span></div>
+  <p class="mode" id="modeNote"></p>`;
+}
+
+/* --- actions --- */
+function snapshot(){return JSON.stringify({tx:state.tx, issues:state.issues, rules:state.rules, catChoice:state.catChoice, subUse:state.subUse});}
+function act(label, fn){
+  state.history.push(snapshot()); fn(); state.showPicker=false; render(); toast(label);
+}
+let toastTimer;
+function toast(t){
+  const el=document.getElementById("toast"); document.getElementById("toastText").textContent=t;
+  el.classList.add("show"); clearTimeout(toastTimer); toastTimer=setTimeout(()=>el.classList.remove("show"),5000);
+}
+document.getElementById("undoBtn").addEventListener("click",()=>{
+  const s=state.history.pop(); if(!s) return;
+  Object.assign(state, JSON.parse(s)); state.gapBusy=false; state.mixSplit=null; state.mixBusy=false; render();
+  document.getElementById("toast").classList.remove("show");
+});
+function setCat(c){
+  act(`Uber → ${CATS[c]}. AI запам'ятав правило`, ()=>{
+    state.tx=state.tx.map(t=>t.id===2?{...t,c,fixed:true}:t);
+    state.rules={...state.rules, Uber:c}; state.catChoice=c; state.issues={...state.issues, cat:"fixed"};
+  });
+}
+function fillGap(src){
+  state.gapBusy=true; render();
+  setTimeout(()=>{ state.gapBusy=false;
+    act(`${src}: додано 2 транзакції, дублів не знайдено`, ()=>{ state.tx=[...state.tx,...missing.map(x=>({...x}))]; state.issues={...state.issues, gap:"fixed"}; });
+  },1400);
+}
+
+function bindView(){
+  const v=document.getElementById("view");
+  v.querySelectorAll("[data-go]").forEach(b=>b.addEventListener("click",()=>{state.tab=b.dataset.go;render();}));
+  v.querySelectorAll("[data-act]").forEach(b=>b.addEventListener("click",()=>{
+    const a=b.dataset.act;
+    if(a==="mergeDup") act("Дублі Lidl об'єднано", ()=>{ state.tx=state.tx.filter(t=>t.id!==5).map(t=>t.id===4?{...t,flag:null,fixed:true}:t); state.issues={...state.issues,dup:"fixed"}; });
+    if(a==="keepDup") act("Залишено обидві покупки Lidl", ()=>{ state.tx=state.tx.map(t=>t.flag==="dup"?{...t,flag:null}:t); state.issues={...state.issues,dup:"kept"}; });
+    if(a==="catConfirm") setCat("Transport");
+    if(a==="catOther"){ state.showPicker=!state.showPicker; render(); }
+    if(a==="reconnect") fillGap("Банк перепідключено");
+    if(a==="splitOk"){ const items=state.mixSplit.items; act(`Allegro розділено на ${items.length} категорії`, ()=>{
+        const base=state.tx.find(t=>t.id===1); const rest=state.tx.filter(t=>t.id!==1);
+        state.tx=[...rest, ...items.map((i,n)=>({id:100+n, d:base.d, m:"Allegro · "+i.name, c:"Shopping", sub:SUB[i.sub]?i.sub:"Other", a:i.amount, fixed:true}))];
+        items.forEach(i=>{ const k=SUB[i.sub]?i.sub:"Other"; state.subUse={...state.subUse,[k]:(state.subUse[k]||0)+1}; });
+        state.issues={...state.issues, mix:"fixed"}; state.mixSplit=null; }); }
+    if(a==="splitNo"){ state.mixSplit=null; render(); }
+  }));
+  v.querySelectorAll("[data-sub]").forEach(b=>b.addEventListener("click",()=>{ const k=b.dataset.sub;
+    act(`Allegro → ${SUB[k]}. Категорія піднялась у списку`, ()=>{
+      state.tx=state.tx.map(t=>t.id===1?{...t,sub:k,fixed:true}:t);
+      state.subUse={...state.subUse,[k]:(state.subUse[k]||0)+1}; state.issues={...state.issues, mix:"fixed"}; state.mixSplit=null; }); }));
+  const os=v.querySelector("#orderShot"); if(os) os.addEventListener("change",()=>{ if(os.files.length) parseOrder(os.files[0]); });
+  v.querySelectorAll("[data-cat]").forEach(b=>b.addEventListener("click",()=>setCat(b.dataset.cat)));
+  const f=v.querySelector("#stmt"); if(f) f.addEventListener("change",()=>{ if(f.files.length) fillGap("Виписку розпізнано"); });
+  v.querySelectorAll("[data-ex]").forEach(b=>b.addEventListener("click",()=>{
+    const [d,a,t]=b.dataset.ex.split("|"); v.querySelector("#inDesc").value=d; v.querySelector("#inAmt").value=a; v.querySelector("#inTime").value=t;
+  }));
+  const run=v.querySelector("#runAi"); if(run) run.addEventListener("click", classify);
+  const mn=v.querySelector("#modeNote"); if(mn) mn.textContent = aiReady===false ? "Демо-режим: AI недоступний у цьому перегляді, працюють локальні правила й довідник." : "";
+}
+document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",()=>{state.tab=t.dataset.tab;render();}));
+
+/* --- order screenshot (AI vision) --- */
+const DEMO_SPLIT={demo:true, items:[{name:"Футболка спортивна", sub:"Clothes", amount:54.90},{name:"Органайзер для шафи", sub:"Home", amount:31.42}]};
+async function parseOrder(file){
+  state.mixBusy=true; state.mixSplit=null; render();
+  let res=null;
+  try{
+    if(sampleFn){
+      const lim = sampleFn.limits ? await sampleFn.limits() : {};
+      if(lim && lim.images){
+        const r = await sampleFn.json(`На зображенні скрін замовлення з маркетплейсу (наприклад Allegro). Банківська транзакція: Allegro $86.32.
+Знайди товари та їхні ціни. Кожному товару признач підкатегорію лише з ключів: Clothes, Electronics, Home, Kids, Food, Beauty, Other.
+Поверни лише JSON: {"items":[{"name": коротка назва українською, "sub": ключ, "amount": число}]}. Якщо товарів не видно, поверни {"items":[]}.`, {images:[file], modelTier:"default"});
+        if(r && Array.isArray(r.items) && r.items.length) res={demo:false, items:r.items.map(i=>({name:String(i.name||"Товар").slice(0,40), sub:SUB[i.sub]?i.sub:"Other", amount:+i.amount||0}))};
+      }
+    }
+  }catch(e){ res=null; }
+  state.mixBusy=false; state.mixSplit = res || DEMO_SPLIT; render();
+}
+
+/* --- categorisation engine --- */
+const DIRECTORY = [
+  [/biedronka|lidl|auchan|carrefour|zabka|żabka|tesco|aldi/i,"Groceries","Lidl / Biedronka / Żabka"],
+  [/orlen|shell|bp |circle k|metro|ztm|bolt|uber \*trip|uber trip/i,"Transport","АЗС / транспорт"],
+  [/netflix|spotify|hbo|disney|youtube premium/i,"Entertainment","стрімінг",true],
+  [/cinema/i,"Entertainment","кіно"],
+  [/allegro|amazon|mall|zara|h&m/i,"Shopping","Покупки"],
+  [/energy|internet|orange|t-mobile|pge/i,"Bills","рахунки",true],
+  [/cafe|pizza|bistro|mcdonald|kfc|eats|glovo|wolt/i,"Dining","Кафе / доставка"]
+];
+function merchantKey(desc){ return Object.keys(state.rules).find(m=>desc.toLowerCase().includes(m.toLowerCase())); }
+function fromDirectory(desc){ for(const [re,c,n,rec] of DIRECTORY){ if(re.test(desc)) return {c,n,rec:!!rec}; } return null; }
+
+let sampleFn=null, aiReady=null;
+(async()=>{ try{ if(window.claude && claude.use){ sampleFn=await claude.use("sample"); } }catch(e){ sampleFn=null; }
+  aiReady=!!sampleFn; document.getElementById("modePill").textContent = aiReady?"AI Data Check · live":"AI Data Check · демо";
+  const mn=document.getElementById("modeNote"); if(mn && !aiReady) mn.textContent="Демо-режим: AI недоступний у цьому перегляді, працюють локальні правила й довідник.";
+})();
+
+function showResult(r){
+  const el=document.getElementById("result"); if(!el) return;
+  const pct=Math.round((r.confidence||0)*100);
+  const col = r.confidence>=0.85?"var(--ok)":r.confidence>=0.6?"var(--warn)":"var(--bad)";
+  const decision = r.confidence>=0.85?"Ставимо категорію автоматично":r.confidence>=0.6?"Ставимо, але позначаємо «перевір»":"Питаємо користувача";
+  const trace=(r.trace||[]).map(([st,txt])=>`<div style="display:flex;gap:8px;font-size:12px;align-items:baseline"><span style="font-weight:700;color:${st==="hit"?"var(--ok)":st==="skip"?"var(--muted)":"var(--accent)"}">${st==="hit"?"✓":st==="skip"?"–":"→"}</span><span style="color:${st==="skip"?"var(--muted)":"var(--ink)"}">${txt}</span></div>`).join("");
+  el.innerHTML=`${trace?`<div style="display:flex;flex-direction:column;gap:3px;padding-bottom:8px;border-bottom:1px solid var(--line)">${trace}</div>`:""}<span class="lvl">${r.level}</span>
+    <div class="cat">${CATS[r.category]||r.category}</div>
+    <div class="conf">Впевненість<div class="bar"><i style="width:${pct}%;background:${col}"></i></div>${(r.confidence||0).toFixed(2)}</div>
+    <span class="pill ${r.confidence>=0.85?"ok":r.confidence>=0.6?"warn":"bad"}">${decision}</span>
+    ${r.recurring?`<span class="pill ai">Регулярний платіж / підписка</span>`:""}
+    <div class="why">${r.reason}</div>
+    <span class="note">${r.cost}</span>`;
+}
+
+async function classify(){
+  const desc=document.getElementById("inDesc").value.trim();
+  const amt=document.getElementById("inAmt").value.trim();
+  const time=document.getElementById("inTime").value.trim();
+  const btn=document.getElementById("runAi");
+  if(!desc){ showResult({level:"Помилка", category:"—", confidence:0, reason:"Введи опис транзакції з банку.", cost:""}); return; }
+  const trace=[];
+  // Step 1: personal rules
+  const rk=merchantKey(desc);
+  if(rk){
+    trace.push(["hit",`Крок 1 · твої правила: ${rk} → ${CATS[state.rules[rk]]}`]);
+    trace.push(["skip","Кроки 2–4 не потрібні"]);
+    showResult({trace, level:"Визначено правилом користувача", category:state.rules[rk], confidence:0.98, reason:`Ти раніше виправив ${rk} на «${CATS[state.rules[rk]]}». Правило користувача має пріоритет над довідником і моделлю.`, cost:"Вартість: $0, модель не викликалась"}); return;
+  }
+  trace.push(["skip","Крок 1 · твої правила: для цього мерчанта правила немає"]);
+  // Step 2: shared merchant directory
+  const d=fromDirectory(desc);
+  if(d){
+    trace.push(["hit",`Крок 2 · довідник мерчантів: знайдено (${d.n})`]);
+    trace.push(["skip","Кроки 3–4 не потрібні"]);
+    showResult({trace, level:"Визначено довідником мерчантів", category:d.c, confidence:0.95, recurring:d.rec, reason:`Мерчант уже є в загальному довіднику Pocket, який поповнюється виправленнями всіх користувачів. Так визначається більшість транзакцій.`, cost:"Вартість: $0, модель не викликалась"}); return;
+  }
+  trace.push(["skip","Крок 2 · довідник мерчантів: не знайдено"]);
+  trace.push(["skip","Крок 3 · MCC-код від банку: у цьому прикладі банк його не передав"]);
+  // Step 4: LLM
+  if(!sampleFn){
+    trace.push(["go","Крок 4 · LLM: недоступна в цьому перегляді"]);
+    showResult({trace, level:"Демо-режим", category:"—", confidence:0.4, reason:"У живому режимі тут спрацює модель. Без неї застосунок поставив би «Інше» і спитав користувача в один тап.", cost:""}); return;
+  }
+  trace.push(["go","Крок 4 · LLM: новий або неоднозначний мерчант, питаємо модель"]);
+  btn.disabled=true; btn.innerHTML='<span class="spin"></span> AI думає…';
+  const rules=Object.entries(state.rules).map(([m,c])=>`${m} -> ${c}`).join("; ")||"немає";
+  const prompt=`Ти модуль категоризації банківських транзакцій у застосунку особистих фінансів Pocket (користувачі в Польщі, UK, Німеччині, Іспанії).
+Категорії (використовуй лише ключ англійською): Groceries, Dining, Transport, Shopping, Bills, Entertainment.
+Транзакція: опис "${desc}", сума $${amt}, час ${time}.
+Особисті правила користувача (пріоритетні): ${rules}.
+Поверни лише JSON: {"category": ключ, "confidence": число 0..1 (чесно: якщо з опису не зрозуміло, що куплено, наприклад платіжний посередник PayPal без назви продавця, нижче 0.6; якщо мерчант неоднозначний, нижче 0.75), "merchant": чиста назва мерчанта, "recurring": true/false (підписка чи регулярний рахунок), "reason": одне-два речення українською, чому така категорія, з урахуванням суми й часу}.`;
+  try{
+    const r=await sampleFn.json(prompt,{modelTier:"quick"});
+    if(!r || !CATS[r.category]) throw {code:"bad_output"};
+    const conf=Math.max(0,Math.min(1,+r.confidence||0));
+    showResult({trace, level:`Визначено моделлю${r.merchant?` · мерчант: ${r.merchant}`:""}`, category:r.category, confidence:conf, recurring:!!r.recurring, reason:r.reason||"", cost: conf>=0.6?"Вартість: частки цента; мерчант додається в довідник, і наступного разу спрацює крок 2 за $0":"Вартість: частки цента; через низьку впевненість застосунок питає користувача"});
+  }catch(e){
+    if(e && e.code==="not_granted"){ sampleFn=null; aiReady=false; document.getElementById("modePill").textContent="AI Data Check · демо"; }
+    showResult({trace, level:"Модель не відповіла", category:"—", confidence:0.3, reason:(e&&e.code==="rate_limited")?"Забагато запитів, спробуй за хвилину.":"Не вдалося отримати відповідь AI. Застосунок поставив би «Інше» і спитав користувача.", cost:""});
+  }finally{ btn.disabled=false; btn.textContent="Визначити категорію"; }
+}
+
+render();
+</script>
+</body>
+</html>
