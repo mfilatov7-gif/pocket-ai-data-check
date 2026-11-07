@@ -232,7 +232,7 @@ button{cursor:pointer}
       <div class="stepbody">
         <h2>Як подивитися прототип</h2>
         <ol class="howto">
-          <li><b>Стрічка.</b> Баланс не збігається з банком, AI знайшов проблеми. Натисни синю плашку.</li>
+          <li><b>Стрічка.</b> Баланс не збігається з банком, плашка «Стань на 4 кроки ближче до мрії» веде до виправлень. Натисни її.</li>
           <li><b>Перевірка.</b> Виправ кожну проблему: об'єднай дубль, підтверди категорію Uber, перепідключи банк. Баланс перерахується й стане «звірено ✓». Спробуй «Скасувати».</li>
           <li><b>Як працює AI.</b> Введи будь-яку транзакцію або натисни приклад. Видно, на якому кроці визначилась категорія: більшість знаходиться в довіднику безкоштовно, модель потрібна лише для нових магазинів.</li>
         </ol>
@@ -322,8 +322,10 @@ function balanceCard(){
 
 function feedView(){
   const n=openCount();
-  const banner = n?`<button class="banner" data-go="check" type="button"><div><b>AI Data Check знайшов ${n} ${n===1?"проблему":"проблеми"}</b><small>Перевір і виправ в один тап</small></div><span class="go">→</span></button>`
-    :`<div class="banner done"><div><b>Дані в порядку</b><small>Усі транзакції перевірені, баланс збігається з банком</small></div></div>`;
+  const kr = n===1?"крок":"кроки";
+  const nt = n===1?"неточність":"неточності";
+  const banner = n?`<button class="banner" data-go="check" type="button"><div><b>Стань на ${n} ${kr} ближче до мрії</b><small>AI знайшов ${n} ${nt} в даних. Виправ кожну в один тап</small></div><span class="go">→</span></button>`
+    :`<div class="banner done"><div><b>Дані точні. Мрія ближча</b><small>Усі транзакції перевірені, баланс збігається з банком</small></div></div>`;
   let rows="", gapShown=false;
   const list=[...state.tx].sort((a,b)=>b.d.split(".").reverse().join("").localeCompare(a.d.split(".").reverse().join("")) || a.id-b.id);
   for(const t of list){
