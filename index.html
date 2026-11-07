@@ -63,6 +63,10 @@ button{cursor:pointer}
 .pill.ai{background:var(--accent-soft);color:var(--accent)}
 .recon{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-top:10px;font-variant-numeric:tabular-nums}
 
+.dream{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:18px;background:linear-gradient(135deg,var(--accent-soft),var(--card));border:1px solid var(--line)}
+.dream svg{width:28px;height:28px;flex:none;fill:var(--accent)}
+.dream b{display:block;font-family:var(--display);font-size:15px;line-height:1.25;letter-spacing:-.01em;color:var(--ink)}
+.dream span{font-size:12px;color:var(--muted)}
 .banner{display:flex;gap:12px;align-items:center;background:var(--accent);color:#fff;border:0;border-radius:18px;padding:14px;text-align:left;width:100%}
 .banner b{display:block;font-size:14px}
 .banner small{opacity:.85;font-size:12px}
@@ -334,7 +338,8 @@ function feedView(){
     }
     rows+=txRow(t);
   }
-  return balanceCard()+banner+`<div class="sect">Транзакції</div><div class="card" style="padding:4px 10px">${rows}</div>`;
+  const dream=`<div class="dream"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.4 6.6L21 11l-6.6 2.4L12 20l-2.4-6.6L3 11l6.6-2.4z"/></svg><div><b>Твоя мрія ближча, ніж здається</b><span>${n?'Точні дані — перший крок до неї':'Дані точні, можна планувати'}</span></div></div>`;
+  return dream+balanceCard()+banner+`<div class="sect">Транзакції</div><div class="card" style="padding:4px 10px">${rows}</div>`;
 }
 function txRow(t){
   let flag="";
