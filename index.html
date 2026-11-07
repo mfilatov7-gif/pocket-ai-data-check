@@ -170,7 +170,7 @@ button{cursor:pointer}
         <button class="tab" role="tab" id="t-check" aria-selected="false" data-tab="check">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7l8-4z"/><path d="M9 12l2 2 4-4"/></svg>Перевірка<span class="dot" id="dot">3</span></button>
         <button class="tab" role="tab" id="t-try" aria-selected="false" data-tab="try">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.4 6.6L21 11l-6.6 2.4L12 20l-2.4-6.6L3 11l6.6-2.4z"/></svg>Тест AI</button>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.4 6.6L21 11l-6.6 2.4L12 20l-2.4-6.6L3 11l6.6-2.4z"/></svg>Як працює AI</button>
       </div>
       <div class="toast" id="toast" role="status"><span id="toastText"></span><button id="undoBtn" type="button">Скасувати</button></div>
     </div>
@@ -231,7 +231,7 @@ button{cursor:pointer}
         <ol class="howto">
           <li><b>Стрічка.</b> Баланс не збігається з банком, AI знайшов проблеми. Натисни синю плашку.</li>
           <li><b>Перевірка.</b> Виправ кожну проблему: об'єднай дубль, підтверди категорію Uber, перепідключи банк. Баланс перерахується й стане «звірено ✓». Спробуй «Скасувати».</li>
-          <li><b>Тест AI.</b> Введи будь-яку транзакцію або натисни приклад. Видно, на якому кроці визначилась категорія: більшість знаходиться в довіднику безкоштовно, модель потрібна лише для нових магазинів.</li>
+          <li><b>Як працює AI.</b> Введи будь-яку транзакцію або натисни приклад. Видно, на якому кроці визначилась категорія: більшість знаходиться в довіднику безкоштовно, модель потрібна лише для нових магазинів.</li>
         </ol>
       </div>
     </div>
@@ -417,8 +417,9 @@ function resolvedCard(k){
 }
 
 function tryView(){
-  return `<div class="card">
-    <div class="sect" style="margin:0 0 8px">Перевір AI на своїй транзакції</div>
+  return `<div class="card" style="background:var(--accent-soft);border-color:transparent;font-size:13px">Це не екран застосунку, а демонстрація логіки для перевірки. Введи будь-яку транзакцію й подивись, як AI визначає категорію: спершу безкоштовні правила й довідник, модель лише для нових магазинів, а коли AI не впевнений, він питає.</div>
+  <div class="card">
+    <div class="sect" style="margin:0 0 8px">Перевір на своїй транзакції</div>
     <div style="display:flex;flex-direction:column;gap:10px">
       <label class="field" for="inDesc">Опис з банку<input id="inDesc" value="HEBE 0412 WARSZAWA" autocomplete="off"></label>
       <div class="row2">
@@ -432,6 +433,7 @@ function tryView(){
         <button class="chip" type="button" data-ex="ORLEN STACJA NR 4421|61.20|18:05">Orlen</button>
         <button class="chip" type="button" data-ex="HEBE 0412 WARSZAWA|18.40|17:20">HEBE (новий мерчант)</button>
         <button class="chip" type="button" data-ex="PAYPAL *XYZ 4029357733|15.00|02:14">PayPal (неясно)</button>
+        <button class="chip" type="button" data-ex="ALLEGRO.PL POZNAN|86.32|21:05">Allegro (маркетплейс)</button>
         <button class="chip" type="button" data-ex="Uber|18.00|12:30">Uber (є правило)</button>
       </div>
       <button class="btn pri" id="runAi" type="button">Визначити категорію</button>
@@ -526,12 +528,13 @@ const DIRECTORY = [
   [/orlen|shell|bp |circle k|metro|ztm|bolt|uber \*trip|uber trip/i,"Transport","АЗС / транспорт"],
   [/netflix|spotify|hbo|disney|youtube premium/i,"Entertainment","стрімінг",true],
   [/cinema/i,"Entertainment","кіно"],
-  [/allegro|amazon|mall|zara|h&m/i,"Shopping","Покупки"],
+  [/allegro|amazon|aliexpress|temu|mall/i,"Shopping","маркетплейс",false,true],
+  [/zara|h&m|reserved/i,"Shopping","одяг"],
   [/energy|internet|orange|t-mobile|pge/i,"Bills","рахунки",true],
   [/cafe|pizza|bistro|mcdonald|kfc|eats|glovo|wolt/i,"Dining","Кафе / доставка"]
 ];
 function merchantKey(desc){ return Object.keys(state.rules).find(m=>desc.toLowerCase().includes(m.toLowerCase())); }
-function fromDirectory(desc){ for(const [re,c,n,rec] of DIRECTORY){ if(re.test(desc)) return {c,n,rec:!!rec}; } return null; }
+function fromDirectory(desc){ for(const [re,c,n,rec,mkt] of DIRECTORY){ if(re.test(desc)) return {c,n,rec:!!rec,mkt:!!mkt}; } return null; }
 
 const DEMO_LLM=[
   [/hebe|rossmann|douglas/i,{category:"Shopping", confidence:0.82, merchant:"Hebe (мережа drogerie)", recurring:false, reason:"Hebe — мережа магазинів косметики й побутової хімії в Польщі. Сума $18.40 типова для покупки засобів догляду, тому «Покупки»."}],
@@ -552,13 +555,18 @@ function showResult(r){
   const decision = r.confidence>=0.85?"Ставимо категорію автоматично":r.confidence>=0.6?"Ставимо, але позначаємо «перевір»":"Питаємо користувача";
   const trace=(r.trace||[]).map(([st,txt])=>`<div style="display:flex;gap:8px;font-size:12px;align-items:baseline"><span style="font-weight:700;color:${st==="hit"?"var(--ok)":st==="skip"?"var(--muted)":"var(--accent)"}">${st==="hit"?"✓":st==="skip"?"–":"→"}</span><span style="color:${st==="skip"?"var(--muted)":"var(--ink)"}">${txt}</span></div>`).join("");
   el.innerHTML=`${trace?`<div style="display:flex;flex-direction:column;gap:3px;padding-bottom:8px;border-bottom:1px solid var(--line)">${trace}</div>`:""}<span class="lvl">${r.level}</span>
-    <div class="cat">${r.ask?`Припущення: ${CATS[r.category]||"—"}?`:(CATS[r.category]||r.category)}</div>
+    <div class="cat">${r.askSub?"Покупки · що саме?":r.ask?`Припущення: ${CATS[r.category]||"—"}?`:(CATS[r.category]||r.category)}</div>
     <div class="conf">Впевненість<div class="bar"><i style="width:${pct}%;background:${col}"></i></div>${(r.confidence||0).toFixed(2)}</div>
     <span class="pill ${r.confidence>=0.85?"ok":r.confidence>=0.6?"warn":"bad"}">${decision}</span>
     ${r.recurring?`<span class="pill ai">Регулярний платіж / підписка</span>`:""}
     <div class="why">${r.reason}</div>
     ${r.ask?`<div class="note">Що це було? Вибір стане твоїм правилом:</div><div class="chips" style="margin-top:0">${Object.entries(CATS).map(([k,l])=>`<button class="chip" type="button" data-ask="${k}">${l}</button>`).join("")}</div>`:""}
+    ${r.askSub?`<div class="note">Що ти купив? Часті вибори стоять першими:</div><div class="chips" style="margin-top:0">${Object.keys(SUB).filter(k=>k!=="Other").sort((a,b)=>(state.subUse[b]||0)-(state.subUse[a]||0)).concat("Other").map(k=>`<button class="chip" type="button" data-asksub="${k}">${SUB[k]}</button>`).join("")}</div>`:""}
     <span class="note">${r.cost}</span>`;
+  if(r.askSub) el.querySelectorAll("[data-asksub]").forEach(b=>b.addEventListener("click",()=>{
+    const k=b.dataset.asksub; state.subUse={...state.subUse,[k]:(state.subUse[k]||0)+1};
+    showResult({trace:[["hit",`Користувач обрав «${SUB[k]}» → покупка ${r.askSub}: Покупки · ${SUB[k]}`]], level:"Категорію уточнено", category:"Shopping", confidence:1, reason:`«${SUB[k]}» піднялась у списку, тож наступного разу для ${r.askSub} вона буде першою. Повністю автоматично AI цю категорію не ставить, бо в одному магазині купують різне.`, cost:"Вартість: $0"});
+  }));
   if(r.ask) el.querySelectorAll("[data-ask]").forEach(b=>b.addEventListener("click",()=>{
     const k=b.dataset.ask; state.rules={...state.rules,[r.ask]:k};
     showResult({trace:[["hit",`Користувач обрав «${CATS[k]}» → створено правило ${r.ask} → ${CATS[k]}`]], level:"Збережено правило користувача", category:k, confidence:1, reason:`Наступного разу ${r.ask} визначиться на кроці 1 за $0, без моделі. Перевір: натисни «Визначити категорію» ще раз.`, cost:"Вартість: $0"});
@@ -582,6 +590,13 @@ async function classify(){
   trace.push(["skip","Крок 1 · твої правила: для цього мерчанта правила немає"]);
   // Step 2: shared merchant directory
   const d=fromDirectory(desc);
+  if(d && d.mkt){
+    const mk=merchantName(desc);
+    trace.push(["hit",`Крок 2 · довідник: ${mk} знайдено, але це маркетплейс`]);
+    trace.push(["go","Магазин відомий, а що куплено, не видно: одяг, техніка чи іграшки. Довідник і модель тут не допоможуть, потрібна відповідь користувача"]);
+    const top=Object.keys(state.subUse).filter(k=>state.subUse[k]>0).sort((a,b)=>state.subUse[b]-state.subUse[a]);
+    showResult({trace, level:`Потрібне уточнення · ${mk}`, category:"Shopping", confidence:0.5, askSub:mk, reason:`Категорія «Покупки» занадто загальна для бюджету. AI питає, що куплено${top.length?`; частіше за все ти обирав «${SUB[top[0]]}», тому ця категорія стоїть першою`:""}. Можна також прикріпити скрін замовлення, і AI розділить покупку на кілька категорій (див. картку Allegro у «Перевірці»).`, cost:"Вартість: $0, модель не викликалась"}); return;
+  }
   if(d){
     trace.push(["hit",`Крок 2 · довідник мерчантів: знайдено (${d.n})`]);
     trace.push(["skip","Кроки 3–4 не потрібні"]);
