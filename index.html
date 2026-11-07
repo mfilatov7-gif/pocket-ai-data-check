@@ -105,7 +105,8 @@ button{cursor:pointer}
 .empty b{display:block;font-family:var(--display);color:var(--ok);font-size:17px;margin-bottom:6px}
 
 .field{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;color:var(--muted)}
-.field input{border:1px solid var(--line);background:var(--soft);border-radius:12px;padding:10px 12px;font-size:14px;font-weight:500;color:var(--ink)}
+.field{min-width:0}
+.field input{width:100%;min-width:0;border:1px solid var(--line);background:var(--soft);border-radius:12px;padding:10px 12px;font-size:14px;font-weight:500;color:var(--ink)}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .examples{display:flex;flex-wrap:wrap;gap:6px}
 .result{display:flex;flex-direction:column;gap:8px}
@@ -496,7 +497,7 @@ function bindView(){
     const [d,a,t]=b.dataset.ex.split("|"); v.querySelector("#inDesc").value=d; v.querySelector("#inAmt").value=a; v.querySelector("#inTime").value=t;
   }));
   const run=v.querySelector("#runAi"); if(run) run.addEventListener("click", classify);
-  const mn=v.querySelector("#modeNote"); if(mn) mn.textContent = aiReady===false ? "Демо-режим: AI недоступний у цьому перегляді, працюють локальні правила й довідник." : "";
+  const mn=v.querySelector("#modeNote"); if(mn) mn.textContent = aiReady===false ? "Демо-режим: відповіді моделі на кроці 4 підготовлені заздалегідь. У версії на Claude працює справжня модель." : "";
 }
 document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",()=>{state.tab=t.dataset.tab;render();}));
 
@@ -532,10 +533,16 @@ const DIRECTORY = [
 function merchantKey(desc){ return Object.keys(state.rules).find(m=>desc.toLowerCase().includes(m.toLowerCase())); }
 function fromDirectory(desc){ for(const [re,c,n,rec] of DIRECTORY){ if(re.test(desc)) return {c,n,rec:!!rec}; } return null; }
 
+const DEMO_LLM=[
+  [/hebe|rossmann|douglas/i,{category:"Shopping", confidence:0.82, merchant:"Hebe (мережа drogerie)", recurring:false, reason:"Hebe — мережа магазинів косметики й побутової хімії в Польщі. Сума $18.40 типова для покупки засобів догляду, тому «Покупки»."}],
+  [/paypal/i,{category:"Shopping", confidence:0.35, merchant:"PayPal (продавець невідомий)", recurring:false, reason:"PayPal лише платіжний посередник, назви продавця в описі немає. Це могла бути покупка, підписка чи переказ, тому AI не вгадує, а питає."}],
+  [/duolingo|coursera|udemy/i,{category:"Entertainment", confidence:0.7, merchant:"Освітній сервіс", recurring:true, reason:"Схоже на освітню підписку: щомісячне списання фіксованої суми."}]
+];
+function merchantName(desc){ const w=desc.replace(/[^\p{L}\s]/gu," ").trim().split(/\s+/)[0]||desc; return w.charAt(0).toUpperCase()+w.slice(1).toLowerCase(); }
 let sampleFn=null, aiReady=null;
 (async()=>{ try{ if(window.claude && claude.use){ sampleFn=await claude.use("sample"); } }catch(e){ sampleFn=null; }
   aiReady=!!sampleFn; document.getElementById("modePill").textContent = aiReady?"AI Data Check · live":"AI Data Check · демо";
-  const mn=document.getElementById("modeNote"); if(mn && !aiReady) mn.textContent="Демо-режим: AI недоступний у цьому перегляді, працюють локальні правила й довідник.";
+  const mn=document.getElementById("modeNote"); if(mn && !aiReady) mn.textContent="Демо-режим: відповіді моделі на кроці 4 підготовлені заздалегідь. У версії на Claude працює справжня модель.";
 })();
 
 function showResult(r){
@@ -545,12 +552,17 @@ function showResult(r){
   const decision = r.confidence>=0.85?"Ставимо категорію автоматично":r.confidence>=0.6?"Ставимо, але позначаємо «перевір»":"Питаємо користувача";
   const trace=(r.trace||[]).map(([st,txt])=>`<div style="display:flex;gap:8px;font-size:12px;align-items:baseline"><span style="font-weight:700;color:${st==="hit"?"var(--ok)":st==="skip"?"var(--muted)":"var(--accent)"}">${st==="hit"?"✓":st==="skip"?"–":"→"}</span><span style="color:${st==="skip"?"var(--muted)":"var(--ink)"}">${txt}</span></div>`).join("");
   el.innerHTML=`${trace?`<div style="display:flex;flex-direction:column;gap:3px;padding-bottom:8px;border-bottom:1px solid var(--line)">${trace}</div>`:""}<span class="lvl">${r.level}</span>
-    <div class="cat">${CATS[r.category]||r.category}</div>
+    <div class="cat">${r.ask?`Припущення: ${CATS[r.category]||"—"}?`:(CATS[r.category]||r.category)}</div>
     <div class="conf">Впевненість<div class="bar"><i style="width:${pct}%;background:${col}"></i></div>${(r.confidence||0).toFixed(2)}</div>
     <span class="pill ${r.confidence>=0.85?"ok":r.confidence>=0.6?"warn":"bad"}">${decision}</span>
     ${r.recurring?`<span class="pill ai">Регулярний платіж / підписка</span>`:""}
     <div class="why">${r.reason}</div>
+    ${r.ask?`<div class="note">Що це було? Вибір стане твоїм правилом:</div><div class="chips" style="margin-top:0">${Object.entries(CATS).map(([k,l])=>`<button class="chip" type="button" data-ask="${k}">${l}</button>`).join("")}</div>`:""}
     <span class="note">${r.cost}</span>`;
+  if(r.ask) el.querySelectorAll("[data-ask]").forEach(b=>b.addEventListener("click",()=>{
+    const k=b.dataset.ask; state.rules={...state.rules,[r.ask]:k};
+    showResult({trace:[["hit",`Користувач обрав «${CATS[k]}» → створено правило ${r.ask} → ${CATS[k]}`]], level:"Збережено правило користувача", category:k, confidence:1, reason:`Наступного разу ${r.ask} визначиться на кроці 1 за $0, без моделі. Перевір: натисни «Визначити категорію» ще раз.`, cost:"Вартість: $0"});
+  }));
 }
 
 async function classify(){
@@ -579,8 +591,15 @@ async function classify(){
   trace.push(["skip","Крок 3 · MCC-код від банку: у цьому прикладі банк його не передав"]);
   // Step 4: LLM
   if(!sampleFn){
-    trace.push(["go","Крок 4 · LLM: недоступна в цьому перегляді"]);
-    showResult({trace, level:"Демо-режим", category:"—", confidence:0.4, reason:"У живому режимі тут спрацює модель. Без неї застосунок поставив би «Інше» і спитав користувача в один тап.", cost:""}); return;
+    trace.push(["go","Крок 4 · LLM: новий або неоднозначний мерчант, питаємо модель (демо: відповідь підготовлена заздалегідь)"]);
+    const hit=DEMO_LLM.find(([re])=>re.test(desc));
+    const mk=merchantName(desc);
+    if(hit){ const r=hit[1];
+      showResult({trace, level:`Визначено моделлю · мерчант: ${r.merchant}`, category:r.category, confidence:r.confidence, recurring:r.recurring, reason:r.reason, ask: r.confidence<0.6?mk:null, cost: r.confidence>=0.6?"Вартість: частки цента; мерчант додається в довідник, наступного разу спрацює крок 2 за $0":"Вартість: частки цента; через низьку впевненість застосунок питає користувача"});
+    } else {
+      showResult({trace, level:`Модель не впевнена · мерчант: ${mk}`, category:"Shopping", confidence:0.45, reason:"Мерчант невідомий, і з опису не зрозуміло, що куплено. Замість того щоб мовчки вгадати, застосунок питає користувача.", ask:mk, cost:"Вартість: частки цента"});
+    }
+    return;
   }
   trace.push(["go","Крок 4 · LLM: новий або неоднозначний мерчант, питаємо модель"]);
   btn.disabled=true; btn.innerHTML='<span class="spin"></span> AI думає…';
@@ -594,7 +613,7 @@ async function classify(){
     const r=await sampleFn.json(prompt,{modelTier:"quick"});
     if(!r || !CATS[r.category]) throw {code:"bad_output"};
     const conf=Math.max(0,Math.min(1,+r.confidence||0));
-    showResult({trace, level:`Визначено моделлю${r.merchant?` · мерчант: ${r.merchant}`:""}`, category:r.category, confidence:conf, recurring:!!r.recurring, reason:r.reason||"", cost: conf>=0.6?"Вартість: частки цента; мерчант додається в довідник, і наступного разу спрацює крок 2 за $0":"Вартість: частки цента; через низьку впевненість застосунок питає користувача"});
+    showResult({trace, level:`Визначено моделлю${r.merchant?` · мерчант: ${r.merchant}`:""}`, category:r.category, confidence:conf, recurring:!!r.recurring, reason:r.reason||"", ask: conf<0.6?merchantName(desc):null, cost: conf>=0.6?"Вартість: частки цента; мерчант додається в довідник, і наступного разу спрацює крок 2 за $0":"Вартість: частки цента; через низьку впевненість застосунок питає користувача"});
   }catch(e){
     if(e && e.code==="not_granted"){ sampleFn=null; aiReady=false; document.getElementById("modePill").textContent="AI Data Check · демо"; }
     showResult({trace, level:"Модель не відповіла", category:"—", confidence:0.3, reason:(e&&e.code==="rate_limited")?"Забагато запитів, спробуй за хвилину.":"Не вдалося отримати відповідь AI. Застосунок поставив би «Інше» і спитав користувача.", cost:""});
