@@ -215,7 +215,7 @@ button{cursor:pointer}
         <h2>Що робить фіча</h2>
         <div class="map">
           <div class="maphead"><span>Проблема з даних</span><span>Що робить AI</span></div>
-          <div class="maprow"><span><b>Банк не передав транзакції</b><small>18 відтоків</small></span><span>Щодня звіряє баланс у Pocket з банком. Якщо не сходиться, показує, за які дні бракує даних, і пропонує перепідключити банк або завантажити виписку.</span></div>
+          <div class="maprow"><span><b>Банк не передав транзакції</b><small>18 відтоків</small></span><span>Щодня звіряє баланс у Pocket з банком. Лише якщо баланс не сходиться, шукає дні без транзакцій, показує, де ймовірно пропуск, і пропонує перепідключити банк або завантажити виписку. Якщо баланс збігається, тривоги немає.</span></div>
           <div class="maprow"><span><b>Неправильна категорія</b><small>13 відтоків</small></span><span>Пропонує правильну категорію з рівнем упевненості й поясненням. Якщо не впевнений, питає. Кожна правка користувача стає його правилом.</span></div>
           <div class="maprow"><span><b>Дублі й неправильний баланс</b><small>9 відтоків</small></span><span>Знаходить одну покупку, записану двічі, і пропонує об'єднати. При ручному введенні попереджає одразу.</span></div>
         </div>
@@ -322,7 +322,7 @@ function feedView(){
   const list=[...state.tx].sort((a,b)=>b.d.split(".").reverse().join("").localeCompare(a.d.split(".").reverse().join("")) || a.id-b.id);
   for(const t of list){
     if(!gapShown && state.issues.gap==="open" && t.d<="11.08" && t.d.slice(3)==="08"){
-      rows+=`<div class="gaprow">Немає транзакцій 12–13.08. Схоже, банк не передав дані.</div>`; gapShown=true;
+      rows+=`<div class="gaprow">Баланс не сходиться з банком, а 12–13.08 немає жодної транзакції. Схоже, банк не передав дані за ці дні.</div>`; gapShown=true;
     }
     rows+=txRow(t);
   }
@@ -373,8 +373,8 @@ function checkView(){
   html+= state.issues.gap==="open"? `<div class="card issue ai">
     <span class="pill ai">Пропуск даних</span>
     <h3>Банк не передав транзакції за 12–13.08</h3>
-    <p>Баланс у Pocket більший за банківський: не вистачає витрат приблизно на ${fmt(85.40)}.</p>
-    <div class="why">Чому AI так вважає: зазвичай у тебе 2–4 транзакції на день, а 12–13.08 немає жодної. Контрольна точка балансу показала розбіжність.</div>
+    <p>Сигнал 1: баланс у Pocket більший за банківський, тобто не вистачає витрат приблизно на ${fmt(85.40)}. Сигнал 2: саме 12–13.08 немає жодної транзакції.</p>
+    <div class="why">Чому AI так вважає: сама по собі відсутність покупок нічого не доводить, людина могла просто нічого не купувати. Але тут баланс не сходиться, а у тебе зазвичай 2–4 транзакції на день. Тому AI шукає пропуск саме за 12–13.08. Якби баланс збігався, AI нічого б не показував.</div>
     <div class="acts">${state.gapBusy?`<button class="btn" disabled type="button"><span class="spin"></span> Отримую дані…</button>`:
       `<button class="btn pri" data-act="reconnect" type="button">Перепідключити банк</button><label class="btn" for="stmt">Завантажити виписку</label>`}
     <input type="file" id="stmt" accept=".pdf,.csv,.png,.jpg" hidden></div>
